@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import rangeInt from "~/utils/rangeInt";
-import {get3DFromArray, type Verity2D, VerityGame} from "~/composables/Verity";
+import {get3DFromArray, type Verity2D, type Verity3D, VerityGame} from "~/composables/Verity";
 
 const showDebugInfo = ref(false)
 
@@ -24,6 +24,7 @@ interface InteractionData {
     pickUpShape: (Verity2D | undefined),
     dissectIdx: (number | undefined),
     dissectShape: (Verity2D | undefined),
+    builtShape: (Verity3D | undefined),
   }
 }
 
@@ -36,6 +37,7 @@ function getEmptyInteractionData(): InteractionData {
       pickUpShape: undefined,
       dissectIdx: undefined,
       dissectShape: undefined,
+      builtShape: undefined,
     }
   }
 }
@@ -97,15 +99,23 @@ function breakShape(roomIdx: number) {
 function canOuterPick(shape: Verity2D) {
   let wasPickedShape = interactionData.value.outer.pickUpShape
   let wasDissectShape = interactionData.value.outer.dissectShape
-  return wasDissectShape !== shape && (wasPickedShape === undefined || wasPickedShape !== shape) && !(wasPickedShape !== undefined && wasDissectShape !== undefined)
+  let outerBuiltShape = interactionData.value.outer.builtShape
+  return wasDissectShape !== shape && outerBuiltShape === undefined && (wasPickedShape === undefined || wasPickedShape !== shape) && !(wasPickedShape !== undefined && wasDissectShape !== undefined)
 }
 
 function doOuterPick(shape: Verity2D) {
   let wasPickedShape = interactionData.value.outer.pickUpShape
   if(wasPickedShape !== undefined) {
-    // todo
+    interactionData.value.outer.builtShape = combine2D(wasPickedShape, shape)
+    interactionData.value.outer.pickUpShape = undefined
   } else {
     interactionData.value.outer.pickUpShape = shape
+  }
+}
+
+function doOuterBreakdown() {
+  if(interactionData.value.outer.builtShape !== undefined) {
+    interactionData.value.outer.builtShape = undefined
   }
 }
 
@@ -166,6 +176,10 @@ function reset() {
           <div v-for="shape in allV2d" class="flex flex-col justify-center items-center gap-2">
             <img class="size-16" :src="getImg(shape)" :alt="`the shape ${shape}`">
             <button class="sm-btn" :disabled="!canOuterPick(shape)" @click="doOuterPick(shape)">获取裂片</button>
+          </div>
+          <div v-show="interactionData.outer.builtShape !== undefined" class="flex flex-col justify-center items-center gap-2">
+            <img class="size-16" :src="getImg(interactionData.outer.builtShape)" :alt="`the shape built up ${interactionData.outer.builtShape}`">
+            <button class="sm-btn" :disabled="interactionData.outer.builtShape === undefined" @click="doOuterBreakdown()">拆解</button>
           </div>
         </div>
         <div class="flex flex-col md:flex-row justify-center items-center gap-8">
